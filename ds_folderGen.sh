@@ -30,6 +30,20 @@ if __name__ == '__main__':
 echo "Create .gitignore"
 echo "data/*\n" > .gitignore
 
-LOGO = "C:/Users/tnguy/OneDrive/Desktop/EnhanceIT_expenses/enhanceITLogo.png"
+wget https://d2q79iu7y748jz.cloudfront.net/s/_squarelogo/6930c22db55ee0ebfc84ac24baffaf48 -O enhanceIT.png
 
-cp $LOGO ./data
+
+echo "Create READEME.md file"
+echo "Please enter your project's name:"
+
+read projectName
+
+echo "Please enter description for you project:"
+
+read description
+
+echo """# ${projectName}
+
+${description}
+
+""" > README.md
