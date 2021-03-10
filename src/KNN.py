@@ -1,3 +1,4 @@
+import heapq
 import numpy as np
 from numpy.linalg import norm
 from numpy import dot
@@ -6,6 +7,7 @@ import matplotlib.pyplot as plt
 from logzero import setup_logger
 import logging
 import functools
+from sklearn.metrics.pairwise import cosine_similarity
 
 logger = setup_logger(level=logging.INFO)
 
@@ -69,14 +71,27 @@ class KNNClassifierCosineSim:
     def cos_sim(self, a:np.array, b:np.array) -> float:
         cos_sim = dot(a, b) / (norm(a) * norm(b))
         return cos_sim
-    def predict(self, X, K:int, epsilon:int=1e-3) -> np.array:
-        N = len(X)
-        y_hat = np.zeros(N)
+    def predict(self, X: np.array, K:int, epsilon:int=1e-3) -> np.array:
+        """KNN with cosine_similiarity
 
-        for i in range(N):
-            cosSim = np.dot(self.X, X[i]) / (norm(self.X, axis=1)*norm(X[i]))
-            idx = np.argsort(cosSim)[:K]
-            gamma_k = 1 / (np.sqrt(cosSim[idx]) + epsilon) # computing the weights 
-            y_hat[i] = np.bincount(self.y[idx], weights=gamma_k).argmax()
-        return y_hat
+        Args:
+            X (np.array): Input data
+            K (int): number of nearest neighbors
+            epsilon (int, optional): value to smoothen division. Defaults to 1e-3.
+
+        Returns:
+            np.array: vector of predictions
+        """
+
+        cosim = cosine_similarity(self.X, X)
+        top = [(heapq.nlargest((k+1), range(len(i)), i.take)) for i in cosim]
+
+        # convert indices to numbers
+        top = [[y_train[j] for j in i[:k]] for i in top]
+        # votes and return prediction for every input data
+        pred = [max(set(i), key=i.count) for i in top]
+
+        pred = np.array(pred)
+
+        return pred
         
