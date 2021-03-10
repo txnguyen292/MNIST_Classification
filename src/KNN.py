@@ -1,3 +1,4 @@
+from typing import Optional, List
 import heapq
 import numpy as np
 from numpy.linalg import norm
@@ -11,15 +12,35 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 logger = setup_logger(level=logging.INFO)
 
-
+Matrix = List[List[float]]
 
 
 import multiprocessing as mp
 
-def accuracy(y, y_hat):
+def accuracy(y: np.array, y_hat: np.array) -> float:
+    """Compute rate of correction
+
+    Args:
+        y (np.array): ground truth
+        y_hat (np.array): prediction vector
+
+    Returns:
+        float: [description]
+    """
+    assert len(y) == len(y_hay), "Vectors must be of same length"
     return np.mean(y, y_hat)
 
-def random_generator(D:int, C:int, random_seed:int=123):
+def random_generator(D:int, C:int, random_seed:Optional[int]=123) -> Matrix:
+    """randomly generating data with normal distribution
+
+    Args:
+        D (int): ?
+        C (int): ?
+        random_seed (int, optional): [description]. Defaults to 123.
+
+    Returns:
+        Matrix: [description]
+    """
     np.random.seed(random_seed)
     N=int(C*1e3)
 
@@ -33,11 +54,22 @@ def random_generator(D:int, C:int, random_seed:int=123):
     return (X, y)
 
 class KNNClassifier:
+    """KNN classifier using euclidean distance"""
     def fit(self, X:np.array, y:np.array) -> None:
         self.X = X
         self.y = y
         self._pool = mp.cpu_count()
-    def predict(self, X:np.array, K:int, epsilon:int=1e-3) -> np.array:
+    def predict(self, X:np.array, K:int, epsilon:Optional[int]=1e-3) -> np.array:
+        """Making predictions with KNN 
+
+        Args:
+            X (np.array): input data
+            K (int): number of nearest neighbors
+            epsilon (int, optional): value to smoothen division. Defaults to 1e-3.
+
+        Returns:
+            np.array: [description]
+        """
         N = len(X)
         y_hat = np.zeros(N)
 
@@ -48,22 +80,47 @@ class KNNClassifier:
             y_hat[i] = np.bincount(self.y[idx], weights=gamma_k).argmax()
         return y_hat
 
-    def predict_single(self, K, epsilon:int, X):
+    def predict_single(self, K:int, epsilon:int, X: np.array) -> List[float]:
+        """Make prediction with Knn on 1 single observation
+
+        Args:
+            K (int): number of nearest neighbors
+            epsilon (int): value to smoothen division
+            X (np.array): input data
+
+        Returns:
+            List[float]: prediction
+        """
         dist2 = np.sum((self.X - X)**2, axis=1)
         idx = np.argsort(dist2)[:K]
         gamma_k = 1 / (np.sqrt(dist2[idx]) + epsilon)
         y_hat = np.bincount(self.y[idx], weights=gamma_k).argmax()
         return y_hat
 
-    def predict_multi(self, K:int, epsilon:int, X:np.array) -> np.array:
+    def predict_multi(self, K:int, epsilon:int, num_cpu: int, X:np.array) -> np.array:
+        """Making predictions using knn with multi cores
+
+        Args:
+            K (int): number of nearest neighbors
+            epsilon (int): value to smoothen division
+            num_cpu (int): number of cores to be used
+            X (np.array): input data
+
+        Returns:
+            np.array: vector of predictions
+        """
         predictSingle = functools.partial(self.predict_single, K, epsilon)
-        cpus = self._pool - 1
+        if num_cpu:
+            cpus = num_cpu
+        else:
+            cpus = self._pool - 1
         logger.debug(f"training with {cpus} cpus")
         pool = mp.Pool(cpus)
         y_hat = pool.map(predictSingle, X)
         return y_hat
 
 class KNNClassifierCosineSim:
+    """KNN classifier using cosine similarity"""
     def fit(self, X:np.array, y:np.array) -> None:
         self.X = X
         self.y = y
